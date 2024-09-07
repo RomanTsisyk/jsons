@@ -3,8 +3,10 @@ package io.github.romantsisyk.cryptolib
 import android.security.keystore.*
 import java.security.*
 import java.security.spec.ECGenParameterSpec
+import java.util.Calendar
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
+import javax.crypto.SecretKeyFactory
 
 object KeyHelper {
 
@@ -13,11 +15,16 @@ object KeyHelper {
     /**
      * Generates an AES symmetric key and stores it in the Keystore.
      */
-    fun generateAESKey(alias: String) {
+    fun generateAESKey(alias: String, validityDays: Int = 365) {
         val keyGenerator = KeyGenerator.getInstance(
             KeyProperties.KEY_ALGORITHM_AES,
             ANDROID_KEYSTORE
         )
+
+        val calendar = Calendar.getInstance()
+        val startDate = calendar.time
+        calendar.add(Calendar.DAY_OF_YEAR, validityDays)
+        val endDate = calendar.time
 
         val keyGenParameterSpec = KeyGenParameterSpec.Builder(
             alias,
@@ -26,6 +33,8 @@ object KeyHelper {
             .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
             .setKeySize(256)
+            .setKeyValidityStart(startDate)
+            .setKeyValidityEnd(endDate)
             .build()
 
         keyGenerator.init(keyGenParameterSpec)
@@ -110,5 +119,31 @@ object KeyHelper {
         keyStore.load(null)
         val entry = keyStore.getEntry(alias, null) as? KeyStore.PrivateKeyEntry
         return entry?.certificate?.publicKey
+    }
+
+    /**
+     * Lists all aliases (keys) stored in the Keystore.
+     */
+    fun listKeys(): List<String> {
+        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+        val aliases = keyStore.aliases()
+        val keyList = mutableListOf<String>()
+        while (aliases.hasMoreElements()) {
+            keyList.add(aliases.nextElement())
+        }
+        return keyList
+    }
+
+    /**
+     * Deletes a key from the Keystore by its alias.
+     */
+    fun deleteKey(alias: String): Boolean {
+        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+        return if (keyStore.containsAlias(alias)) {
+            keyStore.deleteEntry(alias)
+            true
+        } else {
+            false
+        }
     }
 }
