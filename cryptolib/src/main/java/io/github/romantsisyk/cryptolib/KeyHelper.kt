@@ -4,6 +4,7 @@ import android.security.keystore.*
 import java.security.*
 import java.security.spec.ECGenParameterSpec
 import java.util.Calendar
+import java.util.Date
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.SecretKeyFactory
@@ -15,7 +16,11 @@ object KeyHelper {
     /**
      * Generates an AES symmetric key and stores it in the Keystore.
      */
-    fun generateAESKey(alias: String, validityDays: Int = 365) {
+    fun generateAESKey(
+        alias: String,
+        validityDays: Int = 365,
+        requireUserAuthentication: Boolean = false
+    ) {
         val keyGenerator = KeyGenerator.getInstance(
             KeyProperties.KEY_ALGORITHM_AES,
             ANDROID_KEYSTORE
@@ -26,7 +31,7 @@ object KeyHelper {
         calendar.add(Calendar.DAY_OF_YEAR, validityDays)
         val endDate = calendar.time
 
-        val keyGenParameterSpec = KeyGenParameterSpec.Builder(
+        val builder = KeyGenParameterSpec.Builder(
             alias,
             KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
         )
@@ -35,7 +40,13 @@ object KeyHelper {
             .setKeySize(256)
             .setKeyValidityStart(startDate)
             .setKeyValidityEnd(endDate)
-            .build()
+
+        if (requireUserAuthentication) {
+            builder.setUserAuthenticationRequired(true)
+                .setUserAuthenticationValidityDurationSeconds(-1) // Require authentication for every use
+        }
+
+        val keyGenParameterSpec = builder.build()
 
         keyGenerator.init(keyGenParameterSpec)
         keyGenerator.generateKey()
@@ -145,5 +156,16 @@ object KeyHelper {
         } else {
             false
         }
+    }
+
+    /**
+     * Retrieves KeyInfo for a given key alias.
+     */
+    fun getCustomKeyInfo(alias: String): KeyInfo? {
+        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+        val entry = keyStore.getEntry(alias, null) as? KeyStore.SecretKeyEntry ?: return null
+        val key = entry.secretKey
+        val keyFactory = SecretKeyFactory.getInstance(key.algorithm, ANDROID_KEYSTORE)
+        return keyFactory.getKeySpec(key, KeyInfo::class.java) as? KeyInfo
     }
 }
