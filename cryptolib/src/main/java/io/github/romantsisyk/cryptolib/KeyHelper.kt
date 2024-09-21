@@ -1,10 +1,12 @@
 package io.github.romantsisyk.cryptolib
 
 import android.security.keystore.*
+import io.github.romantsisyk.cryptolib.exceptions.CryptoLibException
+import io.github.romantsisyk.cryptolib.exceptions.KeyGenerationException
+import io.github.romantsisyk.cryptolib.exceptions.KeyNotFoundException
 import java.security.*
 import java.security.spec.ECGenParameterSpec
 import java.util.Calendar
-import java.util.Date
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.SecretKeyFactory
@@ -15,41 +17,46 @@ object KeyHelper {
 
     /**
      * Generates an AES symmetric key and stores it in the Keystore.
+     * Throws KeyGenerationException on failure.
      */
     fun generateAESKey(
         alias: String,
         validityDays: Int = 365,
         requireUserAuthentication: Boolean = false
     ) {
-        val keyGenerator = KeyGenerator.getInstance(
-            KeyProperties.KEY_ALGORITHM_AES,
-            ANDROID_KEYSTORE
-        )
+        try {
+            val keyGenerator = KeyGenerator.getInstance(
+                KeyProperties.KEY_ALGORITHM_AES,
+                ANDROID_KEYSTORE
+            )
 
-        val calendar = Calendar.getInstance()
-        val startDate = calendar.time
-        calendar.add(Calendar.DAY_OF_YEAR, validityDays)
-        val endDate = calendar.time
+            val calendar = Calendar.getInstance()
+            val startDate = calendar.time
+            calendar.add(Calendar.DAY_OF_YEAR, validityDays)
+            val endDate = calendar.time
 
-        val builder = KeyGenParameterSpec.Builder(
-            alias,
-            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-        )
-            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-            .setKeySize(256)
-            .setKeyValidityStart(startDate)
-            .setKeyValidityEnd(endDate)
+            val builder = KeyGenParameterSpec.Builder(
+                alias,
+                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+            )
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setKeySize(256)
+                .setKeyValidityStart(startDate)
+                .setKeyValidityEnd(endDate)
 
-        if (requireUserAuthentication) {
-            builder.setUserAuthenticationRequired(true)
-                .setUserAuthenticationValidityDurationSeconds(-1) // Require authentication for every use
+            if (requireUserAuthentication) {
+                builder.setUserAuthenticationRequired(true)
+                    .setUserAuthenticationValidityDurationSeconds(-1) // Require authentication for every use
+            }
+
+            val keyGenParameterSpec = builder.build()
+
+            keyGenerator.init(keyGenParameterSpec)
+            keyGenerator.generateKey()
+        } catch (e: Exception) {
+            throw KeyGenerationException(alias, e)
         }
-
-        val keyGenParameterSpec = builder.build()
-
-        keyGenerator.init(keyGenParameterSpec)
-        keyGenerator.generateKey()
     }
 
     /**
@@ -105,11 +112,13 @@ object KeyHelper {
 
     /**
      * Retrieves a SecretKey from the Keystore.
+     * Throws KeyNotFoundException if the key does not exist.
      */
-    fun getAESKey(alias: String): SecretKey? {
-        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
-        keyStore.load(null)
-        return keyStore.getKey(alias, null) as? SecretKey
+    fun getAESKey(alias: String): SecretKey {
+        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+        val key = keyStore.getKey(alias, null) as? SecretKey
+            ?: throw KeyNotFoundException(alias)
+        return key
     }
 
     /**
@@ -147,25 +156,28 @@ object KeyHelper {
 
     /**
      * Deletes a key from the Keystore by its alias.
+     * Throws KeyNotFoundException if the key does not exist.
      */
-    fun deleteKey(alias: String): Boolean {
+    fun deleteKey(alias: String) {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-        return if (keyStore.containsAlias(alias)) {
+        if (keyStore.containsAlias(alias)) {
             keyStore.deleteEntry(alias)
-            true
         } else {
-            false
+            throw KeyNotFoundException(alias)
         }
     }
 
     /**
      * Retrieves KeyInfo for a given key alias.
+     * Throws KeyNotFoundException if the key does not exist.
      */
-    fun getCustomKeyInfo(alias: String): KeyInfo? {
+    fun getKeyInfo(alias: String): KeyInfo {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-        val entry = keyStore.getEntry(alias, null) as? KeyStore.SecretKeyEntry ?: return null
+        val entry = keyStore.getEntry(alias, null) as? KeyStore.SecretKeyEntry
+            ?: throw KeyNotFoundException(alias)
         val key = entry.secretKey
         val keyFactory = SecretKeyFactory.getInstance(key.algorithm, ANDROID_KEYSTORE)
         return keyFactory.getKeySpec(key, KeyInfo::class.java) as? KeyInfo
+            ?: throw CryptoLibException("Unable to retrieve KeyInfo for alias '$alias'.")
     }
 }

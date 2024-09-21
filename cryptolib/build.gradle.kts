@@ -33,9 +33,9 @@ android {
 }
 
 dependencies {
-    implementation ("androidx.security:security-crypto:1.1.0-alpha01")
-    implementation ("androidx.work:work-runtime-ktx:2.10.0")
-
+    implementation("androidx.security:security-crypto:1.1.0-alpha01")
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation("androidx.biometric:biometric:1.2.0")
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")

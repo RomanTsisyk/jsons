@@ -14,7 +14,7 @@ object KeyRotationManager {
      * If rotation is needed, generates a new key and deletes the old one.
      */
     fun rotateKeyIfNeeded(alias: String) {
-        val keyInfo = KeyHelper.getCustomKeyInfo(alias) ?: return
+        val keyInfo = KeyHelper.getKeyInfo(alias) ?: return
         val keyValidityEndDate = keyInfo.keyValidityForOriginationEnd ?: return
         val currentDate = Date()
 
