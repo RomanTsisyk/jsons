@@ -2,7 +2,9 @@ package io.github.romantsisyk.cryptolib
 
 import android.app.Activity
 import android.content.Context
+import io.github.romantsisyk.cryptolib.exceptions.AuthenticationException
 import io.github.romantsisyk.cryptolib.exceptions.CryptoLibException
+import io.github.romantsisyk.cryptolib.exceptions.CryptoOperationException
 import io.github.romantsisyk.cryptolib.exceptions.KeyNotFoundException
 
 object CryptoManager {
@@ -32,7 +34,23 @@ object CryptoManager {
             val secretKey = KeyHelper.getAESKey(config.keyAlias)
 
             if (config.requireUserAuthentication) {
-                // ToDo add later
+                BiometricHelper.authenticateWithFallback(
+                    activity,
+                    title = "Encrypt Data",
+                    subtitle = "Authenticate to encrypt your data",
+                    description = "Use your biometric credential or device PIN to proceed",
+                    onSuccess = {
+                        try {
+                            val encryptedData = AESEncryption.encrypt(plaintext, secretKey)
+                            onSuccess(encryptedData)
+                        } catch (e: CryptoOperationException) {
+                            onFailure(e)
+                        }
+                    },
+                    onFailure = { exception ->
+                        onFailure(AuthenticationException(exception?.message ?: "Unknown error"))
+                    }
+                )
             } else {
                 val encryptedData = AESEncryption.encrypt(plaintext, secretKey)
                 onSuccess(encryptedData)
@@ -63,7 +81,23 @@ object CryptoManager {
             val secretKey = KeyHelper.getAESKey(config.keyAlias)
 
             if (config.requireUserAuthentication) {
-                // ToDo add later
+                BiometricHelper.authenticateWithFallback(
+                    activity,
+                    title = "Decrypt Data",
+                    subtitle = "Authenticate to decrypt your data",
+                    description = "Use your biometric credential or device PIN to proceed",
+                    onSuccess = {
+                        try {
+                            val decryptedData = AESEncryption.decrypt(encryptedData, secretKey)
+                            onSuccess(decryptedData)
+                        } catch (e: CryptoOperationException) {
+                            onFailure(e)
+                        }
+                    },
+                    onFailure = { exception ->
+                        onFailure(AuthenticationException(exception?.message ?: "Unknown error"))
+                    }
+                )
             } else {
                 val decryptedData = AESEncryption.decrypt(encryptedData, secretKey)
                 onSuccess(decryptedData)
