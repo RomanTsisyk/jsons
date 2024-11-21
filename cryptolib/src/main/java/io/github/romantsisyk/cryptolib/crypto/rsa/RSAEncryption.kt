@@ -1,4 +1,4 @@
-package io.github.romantsisyk.cryptolib
+package io.github.romantsisyk.cryptolib.crypto.rsa
 
 import android.util.Base64
 import javax.crypto.Cipher

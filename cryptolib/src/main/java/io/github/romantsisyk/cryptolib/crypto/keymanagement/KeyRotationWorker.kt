@@ -1,4 +1,4 @@
-package io.github.romantsisyk.cryptolib
+package io.github.romantsisyk.cryptolib.crypto.keymanagement
 
 import android.content.Context
 import androidx.work.*

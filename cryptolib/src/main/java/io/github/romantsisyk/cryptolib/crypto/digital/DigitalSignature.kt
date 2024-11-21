@@ -1,4 +1,4 @@
-package io.github.romantsisyk.cryptolib
+package io.github.romantsisyk.cryptolib.crypto.digital
 
 import android.util.Base64
 import java.security.PrivateKey

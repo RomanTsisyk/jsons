@@ -1,4 +1,4 @@
-package io.github.romantsisyk.cryptolib
+package io.github.romantsisyk.cryptolib.crypto.aes
 
 import android.util.Base64
 import io.github.romantsisyk.cryptolib.exceptions.CryptoOperationException
