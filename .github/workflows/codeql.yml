@@ -1,0 +1,50 @@
+name: "CodeQL Security Analysis"
+
+on:
+  push:
+    branches: [ "main", "master" ] # Scans code on pushes to main or master
+  pull_request:
+    branches: [ "main", "master" ] # Scans pull requests to main or master
+  schedule:
+    - cron: '36 2 * * 5' # Runs scheduled scans every Friday at 2:36 AM UTC
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
+    permissions:
+      security-events: write # Required to upload scanning results
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: java-kotlin # Analyzes Java and Kotlin code
+            build-mode: autobuild # Automatically builds the project
+
+    steps:
+    # Step 1: Checkout repository
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    # Step 2: Initialize CodeQL
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        build-mode: ${{ matrix.build-mode }}
+        # Optionally specify custom queries (uncomment if needed):
+        # queries: security-extended,security-and-quality
+
+    # Step 3: Handle manual builds if autobuild fails
+    - if: matrix.build-mode == 'manual'
+      shell: bash
+      run: |
+        echo 'Modify this section with the commands to manually build your project.'
+        exit 1
+
+    # Step 4: Perform CodeQL analysis
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{ matrix.language }}"
