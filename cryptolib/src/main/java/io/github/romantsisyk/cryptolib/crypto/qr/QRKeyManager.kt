@@ -28,4 +28,10 @@ object QRKeyManager {
         keyStore.load(null)
         return keyStore.getKey(ALIAS, null) as SecretKey
     }
+
+//    fun generateKey(): SecretKey {
+//        val keyGenerator = KeyGenerator.getInstance("AES", "AndroidKeyStore")
+//        keyGenerator.init(256) // Use appropriate key size
+//        return keyGenerator.generateKey()
+//    }
 }
