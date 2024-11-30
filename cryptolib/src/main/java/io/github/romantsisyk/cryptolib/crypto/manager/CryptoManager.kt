@@ -92,16 +92,22 @@ object CryptoManager {
             val secretKey = KeyHelper.getAESKey(config.keyAlias)
 
             if (config.requireUserAuthentication) {
-                BiometricHelper.authenticate(
+                BiometricHelper(context = activity).authenticate(
                     activity = activity as FragmentActivity,
                     title = title,
                     description = description,
                     onSuccess = {
                         onAuthenticated(secretKey)
                     },
-                    onFailure = { exception ->
-                        onFailure(AuthenticationException(exception?.message ?: "Unknown authentication error"))
-                    }
+                    encryptedData = "testEncryptedData".toByteArray(Charsets.UTF_8),
+                    onAuthenticationError = { errorCode, errString ->
+                        onFailure(
+                            AuthenticationException(
+                                 "Authentication error [$errorCode]: $errString"
+                            )
+                        )
+                    },
+                    onError = {exception ->  println("Error: ${exception.message}")}
                 )
             } else {
                 onAuthenticated(secretKey)

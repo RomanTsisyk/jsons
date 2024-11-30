@@ -1,162 +1,85 @@
 package io.github.romantsisyk.cryptolib.biometrics
 
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
+
+import io.github.romantsisyk.cryptolib.crypto.keymanagement.KeyHelper
+import javax.crypto.Cipher
+import io.github.romantsisyk.cryptolib.crypto.aes.AESEncryption
+import android.content.Context
+import android.widget.Toast
 import androidx.biometric.BiometricPrompt
 import androidx.fragment.app.FragmentActivity
-import io.github.romantsisyk.cryptolib.crypto.keymanagement.KeyHelper
-import java.security.KeyStore
-import javax.crypto.Cipher
-import javax.crypto.KeyGenerator
-import javax.crypto.SecretKey
 
-/**
- * A helper class for managing biometric authentication with secure cryptographic operations.
- */
-class BiometricHelper(
-    private val activity: FragmentActivity,
-    private val executor: java.util.concurrent.Executor,
-    private val onSuccess: (decryptedData: ByteArray?) -> Unit,
-    private val onFailure: (error: String) -> Unit
-) {
+class BiometricHelper(private val context: Context) {
 
-    private val keyAlias = "MySecretKey"
+    fun authenticate(
+        activity: FragmentActivity,
+        title: String,
+        description: String,
+        encryptedData: ByteArray,
+        onSuccess: (ByteArray) -> Unit,
+        onError: (Exception) -> Unit,
+        onAuthenticationError: (Int, CharSequence) -> Unit
+    ) {
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle(title)
+            .setDescription(description)
+            .setSubtitle("Log in using your biometrics")
+            .setDescription("Place your fingerprint on the sensor to authenticate")
+            .setNegativeButtonText("Cancel")
+            .build()
 
-    init {
-        generateSecretKey()
-    }
+        val biometricPrompt = BiometricPrompt(
+            activity,
+            activity.mainExecutor,
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    super.onAuthenticationSucceeded(result)
+                    try {
+                        val decryptedData = result.cryptoObject?.cipher?.let {
+                            AESEncryption.decrypt(
+                                encryptedData.toString(Charsets.UTF_8),
+                                KeyHelper.getKey()
+                            )
+                        }
+                        if (decryptedData != null) {
+                            onSuccess(decryptedData)
+                        } else {
+                            onError(Exception("Decryption returned null"))
+                        }
+                    } catch (e: Exception) {
+                        onError(e)
+                    }
+                }
 
-    private fun generateSecretKey() {
-        try {
-            val keyGenParameterSpec = KeyGenParameterSpec.Builder(
-                keyAlias,
-                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-            )
-                .setBlockModes(KeyProperties.BLOCK_MODE_CBC)
-                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_PKCS7)
-                .setUserAuthenticationRequired(true)
-                .build()
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    super.onAuthenticationError(errorCode, errString)
+                    onAuthenticationError(errorCode, errString)
+                    onError(Exception("Authentication error [$errorCode]: $errString"))
 
-            val keyGenerator = KeyGenerator.getInstance(
-                KeyProperties.KEY_ALGORITHM_AES,
-                "AndroidKeyStore"
-            )
-            keyGenerator.init(keyGenParameterSpec)
-            keyGenerator.generateKey()
-        } catch (e: Exception) {
-            onFailure("Failed to generate secure key: ${e.message}")
-        }
-    }
+                }
 
-    private fun getSecretKey(): SecretKey {
-        val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        return keyStore.getKey(keyAlias, null) as SecretKey
+                override fun onAuthenticationFailed() {
+                    super.onAuthenticationFailed()
+                    Toast.makeText(context, "Authentication failed. Try again.", Toast.LENGTH_SHORT)
+                        .show()
+                }
+            }
+        )
+
+        val cipher = getCipher()
+        val cryptoObject = BiometricPrompt.CryptoObject(cipher)
+
+        biometricPrompt.authenticate(promptInfo, cryptoObject)
     }
 
     private fun getCipher(): Cipher {
-        return Cipher.getInstance(
-            "${KeyProperties.KEY_ALGORITHM_AES}/${KeyProperties.BLOCK_MODE_CBC}/${KeyProperties.ENCRYPTION_PADDING_PKCS7}"
-        )
-    }
-
-    fun authenticateWithBiometrics(encryptedData: ByteArray) {
-        try {
-            val cipher = getCipher()
-            val secretKey = getSecretKey()
+        return try {
+            val secretKey = KeyHelper.getKey() // Retrieve the secure key
+            val cipher = KeyHelper.getCipherInstance() // Get Cipher instance
             cipher.init(Cipher.DECRYPT_MODE, secretKey)
-
-            val biometricPrompt = BiometricPrompt(
-                activity,
-                executor,
-                object : BiometricPrompt.AuthenticationCallback() {
-                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                        super.onAuthenticationSucceeded(result)
-                        val decryptedData = result.cryptoObject?.cipher?.doFinal(encryptedData)
-                        onSuccess(decryptedData)
-                    }
-
-                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                        super.onAuthenticationError(errorCode, errString)
-                        onFailure("Authentication error: $errString")
-                    }
-
-                    override fun onAuthenticationFailed() {
-                        super.onAuthenticationFailed()
-                        onFailure("Authentication failed")
-                    }
-                }
-            )
-
-            val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                .setTitle("Biometric Authentication")
-                .setSubtitle("Authenticate to access secure data")
-                .setNegativeButtonText("Cancel")
-                .build()
-
-            biometricPrompt.authenticate(
-                promptInfo,
-                BiometricPrompt.CryptoObject(cipher)
-            )
+            cipher
         } catch (e: Exception) {
-            onFailure("Biometric authentication failed: ${e.message}")
-        }
-    }
-
-    companion object {
-
-        /**
-         * Handles biometric authentication with simplified usage.
-         */
-        fun authenticate(
-            activity: FragmentActivity,
-            title: String,
-            description: String,
-            onSuccess: (Cipher) -> Unit,
-            onFailure: (Exception?) -> Unit
-        ) {
-            try {
-                val executor = activity.mainExecutor
-
-                val cipher = Cipher.getInstance(
-                    "${KeyProperties.KEY_ALGORITHM_AES}/${KeyProperties.BLOCK_MODE_GCM}/${KeyProperties.ENCRYPTION_PADDING_NONE}"
-                )
-                val secretKey = KeyHelper.getOrCreateSecretKey()
-                cipher.init(Cipher.ENCRYPT_MODE, secretKey)
-
-                val biometricPrompt = BiometricPrompt(
-                    activity,
-                    executor,
-                    object : BiometricPrompt.AuthenticationCallback() {
-                        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                            super.onAuthenticationSucceeded(result)
-                            onSuccess(cipher)
-                        }
-
-                        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                            super.onAuthenticationError(errorCode, errString)
-                            onFailure(Exception(errString.toString()))
-                        }
-
-                        override fun onAuthenticationFailed() {
-                            super.onAuthenticationFailed()
-                            onFailure(Exception("Authentication failed"))
-                        }
-                    }
-                )
-
-                val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                    .setTitle(title)
-                    .setDescription(description)
-                    .setNegativeButtonText("Cancel")
-                    .build()
-
-                biometricPrompt.authenticate(
-                    promptInfo,
-                    BiometricPrompt.CryptoObject(cipher)
-                )
-            } catch (e: Exception) {
-                onFailure(e)
-            }
+            throw IllegalStateException("Failed to initialize Cipher", e)
         }
     }
 }

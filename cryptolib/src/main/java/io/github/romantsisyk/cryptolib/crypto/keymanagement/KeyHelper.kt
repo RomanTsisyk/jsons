@@ -7,6 +7,7 @@ import io.github.romantsisyk.cryptolib.exceptions.KeyNotFoundException
 import java.security.*
 import java.security.spec.ECGenParameterSpec
 import java.util.Calendar
+import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.SecretKeyFactory
@@ -15,6 +16,7 @@ object KeyHelper {
 
     private const val ANDROID_KEYSTORE = "AndroidKeyStore"
     private const val KEY_ALIAS = "MySecureKeyAlias"
+    private const val TRANSFORMATION = "${KeyProperties.KEY_ALGORITHM_AES}/${KeyProperties.BLOCK_MODE_GCM}/${KeyProperties.ENCRYPTION_PADDING_NONE}"
 
     /**
      * Generates an AES symmetric key and stores it in the Keystore.
@@ -206,5 +208,19 @@ object KeyHelper {
 
         keyGenerator.init(keyGenParameterSpec)
         return keyGenerator.generateKey()
+    }
+
+    fun getCipherInstance(): Cipher {
+        return try {
+            Cipher.getInstance(TRANSFORMATION)
+        } catch (e: Exception) {
+            throw IllegalStateException("Failed to get Cipher instance", e)
+        }
+    }
+
+    fun getKey(): SecretKey {
+        val keyStore = java.security.KeyStore.getInstance("AndroidKeyStore")
+        keyStore.load(null)
+        return keyStore.getKey("MySecureKey", null) as SecretKey
     }
 }
