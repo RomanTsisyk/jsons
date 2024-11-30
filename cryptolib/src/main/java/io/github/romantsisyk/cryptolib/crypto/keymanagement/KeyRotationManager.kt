@@ -46,4 +46,11 @@ object KeyRotationManager {
             Log.d(TAG, "Key '$alias' does not require rotation yet.")
         }
     }
+
+    fun isKeyRotationNeeded(alias: String): Boolean {
+        val keyInfo = KeyHelper.getKeyInfo(alias) ?: return false
+        val keyValidityEndDate = keyInfo.keyValidityForOriginationEnd ?: return false
+        val currentDate = Date()
+        return currentDate.after(keyValidityEndDate)
+    }
 }

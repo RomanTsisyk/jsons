@@ -58,7 +58,11 @@ dependencies {
     testImplementation ("org.mockito:mockito-core:5.14.2")
     testImplementation ("org.robolectric:robolectric:4.14.1")
 
+
     // Android instrumentation testing libraries
     androidTestImplementation ("androidx.test.ext:junit:1.2.1")
     androidTestImplementation ("androidx.test.espresso:espresso-core:3.6.1")
+    androidTestImplementation ("androidx.work:work-testing:2.10.0")
+    androidTestImplementation ("androidx.test:core:1.6.1")
+
 }
