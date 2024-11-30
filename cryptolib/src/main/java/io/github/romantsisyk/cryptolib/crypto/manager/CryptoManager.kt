@@ -1,8 +1,8 @@
 package io.github.romantsisyk.cryptolib.crypto.manager
 
+import BiometricHelper
 import android.app.Activity
 import androidx.fragment.app.FragmentActivity
-import io.github.romantsisyk.cryptolib.biometrics.BiometricHelper
 import io.github.romantsisyk.cryptolib.crypto.config.CryptoConfig
 import io.github.romantsisyk.cryptolib.crypto.aes.AESEncryption
 import io.github.romantsisyk.cryptolib.crypto.keymanagement.KeyHelper
@@ -103,11 +103,11 @@ object CryptoManager {
                     onAuthenticationError = { errorCode, errString ->
                         onFailure(
                             AuthenticationException(
-                                 "Authentication error [$errorCode]: $errString"
+                                "Authentication error [$errorCode]: $errString"
                             )
                         )
                     },
-                    onError = {exception ->  println("Error: ${exception.message}")}
+                    onError = { exception -> println("Error: ${exception.message}") }
                 )
             } else {
                 onAuthenticated(secretKey)
