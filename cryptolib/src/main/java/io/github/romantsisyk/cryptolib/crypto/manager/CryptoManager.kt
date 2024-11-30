@@ -1,8 +1,8 @@
 package io.github.romantsisyk.cryptolib.crypto.manager
 
+import BiometricHelper
 import android.app.Activity
 import androidx.fragment.app.FragmentActivity
-import io.github.romantsisyk.cryptolib.biometrics.BiometricHelper
 import io.github.romantsisyk.cryptolib.crypto.config.CryptoConfig
 import io.github.romantsisyk.cryptolib.crypto.aes.AESEncryption
 import io.github.romantsisyk.cryptolib.crypto.keymanagement.KeyHelper
@@ -92,16 +92,22 @@ object CryptoManager {
             val secretKey = KeyHelper.getAESKey(config.keyAlias)
 
             if (config.requireUserAuthentication) {
-                BiometricHelper.authenticate(
+                BiometricHelper(context = activity).authenticate(
                     activity = activity as FragmentActivity,
                     title = title,
                     description = description,
                     onSuccess = {
                         onAuthenticated(secretKey)
                     },
-                    onFailure = { exception ->
-                        onFailure(AuthenticationException(exception?.message ?: "Unknown authentication error"))
-                    }
+                    encryptedData = "testEncryptedData".toByteArray(Charsets.UTF_8),
+                    onAuthenticationError = { errorCode, errString ->
+                        onFailure(
+                            AuthenticationException(
+                                "Authentication error [$errorCode]: $errString"
+                            )
+                        )
+                    },
+                    onError = { exception -> println("Error: ${exception.message}") }
                 )
             } else {
                 onAuthenticated(secretKey)
