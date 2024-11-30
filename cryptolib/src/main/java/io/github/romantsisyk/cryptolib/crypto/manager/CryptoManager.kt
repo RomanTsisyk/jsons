@@ -1,6 +1,7 @@
 package io.github.romantsisyk.cryptolib.crypto.manager
 
 import android.app.Activity
+import androidx.fragment.app.FragmentActivity
 import io.github.romantsisyk.cryptolib.biometrics.BiometricHelper
 import io.github.romantsisyk.cryptolib.crypto.config.CryptoConfig
 import io.github.romantsisyk.cryptolib.crypto.aes.AESEncryption
@@ -91,10 +92,9 @@ object CryptoManager {
             val secretKey = KeyHelper.getAESKey(config.keyAlias)
 
             if (config.requireUserAuthentication) {
-                BiometricHelper.authenticateWithFallback(
-                    activity,
+                BiometricHelper.authenticate(
+                    activity = activity as FragmentActivity,
                     title = title,
-                    subtitle = "",
                     description = description,
                     onSuccess = {
                         onAuthenticated(secretKey)
