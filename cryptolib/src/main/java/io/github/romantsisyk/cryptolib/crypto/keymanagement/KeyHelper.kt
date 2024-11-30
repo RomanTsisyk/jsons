@@ -14,6 +14,7 @@ import javax.crypto.SecretKeyFactory
 object KeyHelper {
 
     private const val ANDROID_KEYSTORE = "AndroidKeyStore"
+    private const val KEY_ALIAS = "MySecureKeyAlias"
 
     /**
      * Generates an AES symmetric key and stores it in the Keystore.
@@ -179,5 +180,31 @@ object KeyHelper {
         val keyFactory = SecretKeyFactory.getInstance(key.algorithm, ANDROID_KEYSTORE)
         return keyFactory.getKeySpec(key, KeyInfo::class.java) as? KeyInfo
             ?: throw CryptoLibException("Unable to retrieve KeyInfo for alias '$alias'.")
+    }
+
+    /**
+     * Retrieves the existing secret key from the Android Keystore or generates a new one if it doesn't exist.
+     */
+    fun getOrCreateSecretKey(): SecretKey {
+        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+
+        // Check if the key already exists
+        if (keyStore.containsAlias(KEY_ALIAS)) {
+            return keyStore.getKey(KEY_ALIAS, null) as SecretKey
+        }
+
+        // Generate a new secret key
+        val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
+        val keyGenParameterSpec = KeyGenParameterSpec.Builder(
+            KEY_ALIAS,
+            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+        )
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setUserAuthenticationRequired(true)
+            .build()
+
+        keyGenerator.init(keyGenParameterSpec)
+        return keyGenerator.generateKey()
     }
 }
