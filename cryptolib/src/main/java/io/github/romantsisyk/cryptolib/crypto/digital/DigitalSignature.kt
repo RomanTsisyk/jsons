@@ -1,3 +1,10 @@
+import io.github.romantsisyk.cryptolib.crypto.CryptoConstants.ALGORITHM_EC
+import io.github.romantsisyk.cryptolib.crypto.CryptoConstants.ALGORITHM_RSA
+import io.github.romantsisyk.cryptolib.crypto.CryptoConstants.EC_KEY_SIZE
+import io.github.romantsisyk.cryptolib.crypto.CryptoConstants.ERROR_UNSUPPORTED_KEY
+import io.github.romantsisyk.cryptolib.crypto.CryptoConstants.RSA_KEY_SIZE
+import io.github.romantsisyk.cryptolib.crypto.CryptoConstants.SIGNATURE_ALGORITHM_ECDSA
+import io.github.romantsisyk.cryptolib.crypto.CryptoConstants.SIGNATURE_ALGORITHM_RSA
 import java.util.Base64
 import java.security.KeyPair
 import java.security.KeyPairGenerator
@@ -13,19 +20,15 @@ object DigitalSignature {
         Security.addProvider(BouncyCastleProvider())
     }
 
-    private const val SIGNATURE_ALGORITHM_RSA = "SHA256withRSA/PSS"
-    private const val SIGNATURE_ALGORITHM_ECDSA = "SHA256withECDSA"
-    private const val KEY_SIZE_RSA = 2048
-    private const val KEY_SIZE_EC = 256
-
     /**
      * Signs data using RSA or EC private key.
      */
     fun sign(data: ByteArray, privateKey: PrivateKey): String {
         val algorithm = when (privateKey.algorithm) {
-            "RSA" -> SIGNATURE_ALGORITHM_RSA
-            "EC" -> SIGNATURE_ALGORITHM_ECDSA
-            else -> throw UnsupportedOperationException("Unsupported key algorithm")
+            ALGORITHM_RSA -> SIGNATURE_ALGORITHM_RSA
+            ALGORITHM_EC  -> SIGNATURE_ALGORITHM_ECDSA
+            else -> throw UnsupportedOperationException(ERROR_UNSUPPORTED_KEY)
+
         }
 
         val signature = Signature.getInstance(algorithm, "BC") // Use Bouncy Castle
@@ -40,9 +43,9 @@ object DigitalSignature {
      */
     fun verify(data: ByteArray, signatureStr: String, publicKey: PublicKey): Boolean {
         val algorithm = when (publicKey.algorithm) {
-            "RSA" -> SIGNATURE_ALGORITHM_RSA
-            "EC" -> SIGNATURE_ALGORITHM_ECDSA
-            else -> throw UnsupportedOperationException("Unsupported key algorithm")
+            ALGORITHM_RSA -> SIGNATURE_ALGORITHM_RSA
+            ALGORITHM_EC  -> SIGNATURE_ALGORITHM_ECDSA
+            else -> throw UnsupportedOperationException(ERROR_UNSUPPORTED_KEY)
         }
 
         val signature = Signature.getInstance(algorithm, "BC") // Use Bouncy Castle
@@ -56,12 +59,12 @@ object DigitalSignature {
      * Generates a key pair for RSA or ECDSA signing.
      * Defaults to RSA.
      */
-    fun generateKeyPair(algorithm: String = "RSA"): KeyPair {
+    fun generateKeyPair(algorithm: String = ALGORITHM_RSA): KeyPair {
         val keyPairGenerator = KeyPairGenerator.getInstance(algorithm)
         val keySize = when (algorithm) {
-            "RSA" -> KEY_SIZE_RSA
-            "EC" -> KEY_SIZE_EC
-            else -> throw UnsupportedOperationException("Unsupported key algorithm")
+            ALGORITHM_RSA -> RSA_KEY_SIZE
+            ALGORITHM_EC  -> EC_KEY_SIZE
+            else -> throw UnsupportedOperationException(ERROR_UNSUPPORTED_KEY)
         }
         keyPairGenerator.initialize(keySize)
         return keyPairGenerator.generateKeyPair()

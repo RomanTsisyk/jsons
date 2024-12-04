@@ -1,5 +1,7 @@
 package io.github.romantsisyk.cryptolib.crypto.rsa
 
+import io.github.romantsisyk.cryptolib.crypto.CryptoConstants
+import io.github.romantsisyk.cryptolib.crypto.CryptoConstants.ALGORITHM_RSA
 import java.util.Base64
 import java.security.KeyPair
 import java.security.KeyPairGenerator
@@ -9,14 +11,11 @@ import java.security.PublicKey
 
 object RSAEncryption {
 
-    private const val TRANSFORMATION = "RSA/ECB/OAEPWithSHA-256AndMGF1Padding"
-    private const val KEY_SIZE = 2048
-
     /**
      * Encrypts plaintext using RSA OAEP.
      */
     fun encrypt(plaintext: ByteArray, publicKey: PublicKey): String {
-        val cipher = Cipher.getInstance(TRANSFORMATION)
+        val cipher = Cipher.getInstance(CryptoConstants.RSA_TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, publicKey)
         val ciphertext = cipher.doFinal(plaintext)
         return Base64.getEncoder().encodeToString(ciphertext)
@@ -26,7 +25,7 @@ object RSAEncryption {
      * Decrypts ciphertext using RSA OAEP.
      */
     fun decrypt(encryptedData: String, privateKey: PrivateKey): ByteArray {
-        val cipher = Cipher.getInstance(TRANSFORMATION)
+        val cipher = Cipher.getInstance(CryptoConstants.RSA_TRANSFORMATION)
         cipher.init(Cipher.DECRYPT_MODE, privateKey)
         val encryptedBytes = Base64.getDecoder().decode(encryptedData)
         return cipher.doFinal(encryptedBytes)
@@ -36,8 +35,8 @@ object RSAEncryption {
      * Generates an RSA key pair (public and private keys).
      */
     fun generateKeyPair(): KeyPair {
-        val keyPairGenerator = KeyPairGenerator.getInstance("RSA")
-        keyPairGenerator.initialize(KEY_SIZE)
+        val keyPairGenerator = KeyPairGenerator.getInstance(ALGORITHM_RSA)
+        keyPairGenerator.initialize(CryptoConstants.RSA_KEY_SIZE)
         return keyPairGenerator.generateKeyPair()
     }
 }

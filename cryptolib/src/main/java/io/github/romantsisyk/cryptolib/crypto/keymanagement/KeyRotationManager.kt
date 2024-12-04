@@ -1,13 +1,12 @@
 package io.github.romantsisyk.cryptolib.crypto.keymanagement
 
 import android.util.Log
+import io.github.romantsisyk.cryptolib.crypto.CryptoConstants
+import io.github.romantsisyk.cryptolib.crypto.CryptoConstants.TAG_KEY_ROTATION
 import java.util.Calendar
 import java.util.Date
 
 object KeyRotationManager {
-
-    private const val TAG = "KeyRotationManager"
-    private const val ROTATION_INTERVAL_DAYS = 90
 
     /**
      * Checks if the key needs rotation based on the rotation interval.
@@ -19,31 +18,21 @@ object KeyRotationManager {
         val currentDate = Date()
 
         if (currentDate.after(keyValidityEndDate)) {
-            try {
-                KeyHelper.generateAESKey(alias)
-                Log.d(TAG, "Key '$alias' rotated successfully.")
-            } catch (e: Exception) {
-                Log.e(TAG, "Key rotation failed for '$alias': ${e.message}")
-            }
+            rotateKey(alias, keyValidityEndDate)
         } else {
-            Log.d(TAG, "Key '$alias' does not require rotation yet.")
+            Log.d(TAG_KEY_ROTATION, "Key '$alias' does not require rotation yet.")
         }
 
 
         val calendar = Calendar.getInstance()
         calendar.time = keyValidityEndDate
-        calendar.add(Calendar.DAY_OF_YEAR, ROTATION_INTERVAL_DAYS)
+        calendar.add(Calendar.DAY_OF_YEAR, CryptoConstants.ROTATION_INTERVAL_DAYS)
         val rotationDate = calendar.time
 
         if (currentDate.after(rotationDate)) {
-            try {
-                KeyHelper.generateAESKey(alias)
-                Log.d(TAG, "Key '$alias' rotated successfully.")
-            } catch (e: Exception) {
-                Log.e(TAG, "Key rotation failed for '$alias': ${e.message}")
-            }
+            rotateKey(alias, rotationDate)
         } else {
-            Log.d(TAG, "Key '$alias' does not require rotation yet.")
+            Log.d(TAG_KEY_ROTATION, "Key '$alias' does not require rotation yet.")
         }
     }
 
@@ -53,4 +42,14 @@ object KeyRotationManager {
         val currentDate = Date()
         return currentDate.after(keyValidityEndDate)
     }
+
+    private fun rotateKey(alias: String, rotationDate: Date) {
+        try {
+            KeyHelper.generateAESKey(alias)
+            Log.d(TAG_KEY_ROTATION, String.format(CryptoConstants.LOG_ROTATION_SUCCESS, alias))
+        } catch (e: Exception) {
+            Log.e(TAG_KEY_ROTATION, String.format(CryptoConstants.LOG_ROTATION_FAILED, alias, e.message))
+        }
+    }
+
 }

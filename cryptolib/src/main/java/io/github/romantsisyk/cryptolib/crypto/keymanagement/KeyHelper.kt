@@ -49,8 +49,11 @@ object KeyHelper {
                 .setKeyValidityEnd(endDate)
 
             if (requireUserAuthentication) {
-                builder.setUserAuthenticationRequired(true)
-                    .setUserAuthenticationValidityDurationSeconds(-1) // Require authentication for every use
+                builder.setUserAuthenticationParameters(
+                    30,
+                    KeyProperties.AUTH_DEVICE_CREDENTIAL
+                            or KeyProperties.AUTH_BIOMETRIC_STRONG
+                )
             }
 
             val keyGenParameterSpec = builder.build()
