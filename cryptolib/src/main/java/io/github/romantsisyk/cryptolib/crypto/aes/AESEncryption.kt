@@ -1,9 +1,10 @@
 package io.github.romantsisyk.cryptolib.crypto.aes
 
-import android.util.Base64
+import java.util.Base64
 import io.github.romantsisyk.cryptolib.exceptions.CryptoOperationException
 import java.security.SecureRandom
 import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
@@ -12,6 +13,7 @@ object AESEncryption {
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
     private const val IV_SIZE = 12 // Recommended IV size for GCM
     private const val TAG_SIZE = 128
+    private const val KEY_SIZE = 256
 
     /**
      * Encrypts plaintext using AES-GCM.
@@ -33,7 +35,7 @@ object AESEncryption {
             val encrypted = iv + ciphertext
 
             // Return as Base64 string
-            Base64.encodeToString(encrypted, Base64.NO_WRAP)
+            Base64.getEncoder().encodeToString(encrypted)
         } catch (e: Exception) {
             throw CryptoOperationException("Encryption", e)
         }
@@ -45,7 +47,7 @@ object AESEncryption {
      */
     fun decrypt(encryptedData: String, key: SecretKey): ByteArray {
         return try {
-            val encryptedBytes = Base64.decode(encryptedData, Base64.NO_WRAP)
+            val encryptedBytes = Base64.getDecoder().decode(encryptedData)
 
             // Extract IV and ciphertext
             val iv = encryptedBytes.copyOfRange(0, IV_SIZE)
@@ -58,5 +60,14 @@ object AESEncryption {
         } catch (e: Exception) {
             throw CryptoOperationException("Decryption", e)
         }
+    }
+
+    /**
+     * Generates a new AES key.
+     */
+    fun generateKey(): SecretKey {
+        val keyGenerator = KeyGenerator.getInstance("AES")
+        keyGenerator.init(KEY_SIZE)
+        return keyGenerator.generateKey()
     }
 }

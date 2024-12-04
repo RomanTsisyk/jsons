@@ -33,6 +33,9 @@ android {
 }
 
 dependencies {
+
+    implementation ("org.bouncycastle:bcprov-jdk15on:1.70")
+
     // ZXing library for QR Code processing
     implementation ("com.google.zxing:core:3.5.3")
 
